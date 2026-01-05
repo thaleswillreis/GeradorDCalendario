@@ -87,7 +87,7 @@ O software executará em uma nova aba do navegador utilizando o seguinte endere�
 ![Exucução](https://raw.githubusercontent.com/thaleswillreis/GeradorDCalendario/main/doc/ExecLocal.png)
 
 > [!NOTE]
-> Para saber mais sobre o deploy e execução na nuvem, consulte a [documentação do Streamlit](https://docs.streamlit.io/).
+> Para saber mais sobre o deploy e execução na nuvem do Streamlit ou demais nuvens, consulte a [documentação do Streamlit](https://docs.streamlit.io/).
 
 ## Casos de Uso
 
@@ -99,6 +99,10 @@ O software executará em uma nova aba do navegador utilizando o seguinte endere�
 ## Observações Importantes
 
 Esse é um projeto em estágio experimental. Antes de utilizar os arquivos de dados gerados através desse projeto em produção, verifique a consistência e a precisão dos dados gerados. O autor original desse projeto não se responsabiliza pelo uso indevido dos dados gerados através do projeto original ou por forks ou clones do mesmo.
+
+## Créditos e Agradecimentos
+
+O cálculo da data de **Domingo de Páscoa** que representa parte importante desse projeto, foi baseado em informações adquiridas no vídeo do especialista em Power BI `Laennder Alves`. **Título:** `"Obter Lista de Feriados no Power BI (sem API)"` - **disponível em:** https://youtu.be/kOf5P6tiTbg?si=whEJ3CxMsfILfEU9
 
 ## Licença
 
