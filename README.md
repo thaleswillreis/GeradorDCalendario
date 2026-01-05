@@ -48,7 +48,6 @@ Oferecer um software capaz de:
 | `EhFeriado` | Valor lógico indicativo de feriado nacional ou estadual| Boolean | VERDADEIRO |
 
 
-
 > [!NOTE]
 > As colunas `Feriado Estadual` e `Estado` só são incluídas no dataset quando pelo menos um Estado é selecionado na lista de Estados onde há feriados estaduais.
 
@@ -83,9 +82,9 @@ $ streamlit run app.py
 ```
 ### Resultado (Execução Local)
 
-Uma aba do navegador abrirá com o seguinte endereço: `http://localhost:8501`
+O software executará em uma nova aba do navegador utilizando o seguinte endereço: `http://localhost:8501`
 
-
+![Exucução](https://raw.githubusercontent.com/thaleswillreis/GeradorDCalendario/main/doc/ExecLocal.png)
 
 > [!NOTE]
 > Para saber mais sobre o deploy e execução na nuvem, consulte a [documentação do Streamlit](https://docs.streamlit.io/).
