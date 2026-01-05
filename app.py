@@ -2,18 +2,13 @@ import io
 import json
 from datetime import date, datetime, timedelta
 from typing import List, Dict, Tuple
-
 import numpy as np
 import pandas as pd
 import streamlit as st
 
 
-# Cálculo de Páscoa e feriados
+# --- CÁLCULO DE PÁSCOA ---
 def easter_sunday(year: int) -> date:
-    """
-    Calcula o Domingo de Páscoa usando o Anonymous Gregorian Algorithm.
-    Retorna um objeto datetime.date.
-    """
     a = year % 19
     b = year // 100
     c = year % 100
@@ -31,65 +26,140 @@ def easter_sunday(year: int) -> date:
     return date(year, n, o + 1)
 
 
-# Feriados
-def fixed_holidays(year: int) -> List[Dict[str, str]]:
-    """
-    Feriados fixos regulamentados por lei federal no Brasil.
-    """
-    return [
-        {"date": date(year, 1, 1), "holiday": "Ano Novo"},
+# --- LÓGICA DE FERIADOS ---
+def get_holidays(year: int, config: dict) -> List[Dict]:
+    easter = easter_sunday(year)
+    hols = [
+        {"date": date(year, 1, 1), "holiday": "Confraternização Universal"},
         {"date": date(year, 4, 21), "holiday": "Tiradentes"},
         {"date": date(year, 5, 1), "holiday": "Dia do Trabalho"},
         {"date": date(year, 9, 7), "holiday": "Independência do Brasil"},
         {"date": date(year, 10, 12), "holiday": "Nossa Sra. Aparecida"},
         {"date": date(year, 11, 2), "holiday": "Finados"},
         {"date": date(year, 11, 15), "holiday": "Proclamação da República"},
+        {"date": date(year, 11, 20), "holiday": "Consciência Negra"},
         {"date": date(year, 12, 25), "holiday": "Natal"},
-    ]
-
-
-# Datas comemorativas móveis
-def movable_holidays(year: int) -> List[Dict[str, str]]:
-    """
-    Datas comemorativas móveis baseadas na Páscoa.
-    """
-    easter = easter_sunday(year)
-    return [
-        {"date": easter - timedelta(days=47), "holiday": "Carnaval"},
         {"date": easter - timedelta(days=2), "holiday": "Paixão de Cristo"},
         {"date": easter, "holiday": "Domingo de Páscoa"},
-        {"date": easter + timedelta(days=60), "holiday": "Corpus Christi"},
     ]
 
+    if config.get("incluir_carnaval"):
+        hols.append(
+            {"date": easter - timedelta(days=48), "holiday": "Carnaval (Segunda)"}
+        )
+        hols.append(
+            {"date": easter - timedelta(days=47), "holiday": "Carnaval (Terça)"}
+        )
+    if config.get("incluir_cinzas"):
+        hols.append(
+            {"date": easter - timedelta(days=46), "holiday": "Quarta-feira de Cinzas"}
+        )
+    if config.get("incluir_corpus"):
+        hols.append({"date": easter + timedelta(days=60), "holiday": "Corpus Christi"})
+    if config.get("incluir_vespera_natal"):
+        hols.append({"date": date(year, 12, 24), "holiday": "Véspera de Natal"})
+    if config.get("incluir_vespera_ano_novo"):
+        hols.append({"date": date(year, 12, 31), "holiday": "Véspera de Ano Novo"})
 
-# Feriados em um intervalo de datas
-def all_holidays_in_range(start: date, end: date) -> pd.DataFrame:
-    years = range(start.year, end.year + 1)
-    records = []
-    for y in years:
-        for h in fixed_holidays(y) + movable_holidays(y):
-            if start <= h["date"] <= end:
-                records.append(
-                    {"Data": pd.to_datetime(h["date"]), "Feriado": h["holiday"]}
-                )
-    return pd.DataFrame(records).sort_values("Data").reset_index(drop=True)
+    return hols
 
 
-# Geração da dimensão de datas
-def generate_date_dimension(start: date, end: date) -> pd.DataFrame:
-    """
-    Gera uma tabela dimensão de datas com colunas úteis para BI.
-    Inclui feriados fixos e móveis brasileiros.
-    """
-    # Série de datas
+def get_state_holidays(year: int, selected_states: List[str]) -> List[Dict]:
+    easter = easter_sunday(year)
+    state_data = {
+        "São Paulo": [
+            {"date": date(year, 7, 9), "holiday": "Revolução Constitucionalista"}
+        ],
+        "Rio de Janeiro": [
+            {"date": easter - timedelta(days=47), "holiday": "Carnaval (Feriado RJ)"},
+            {"date": date(year, 4, 23), "holiday": "Dia de São Jorge"},
+            {"date": date(year, 10, 20), "holiday": "Dia do Comerciário"},
+        ],
+        "Minas Gerais": [{"date": date(year, 4, 21), "holiday": "Data Magna de MG"}],
+        "Rio Grande do Sul": [
+            {"date": date(year, 9, 20), "holiday": "Revolução Farroupilha"}
+        ],
+        "Bahia": [{"date": date(year, 7, 2), "holiday": "Independência da Bahia"}],
+        "Pernambuco": [
+            {"date": date(year, 3, 6), "holiday": "Data Magna de PE"},
+            {"date": date(year, 6, 24), "holiday": "Dia de São João"},
+        ],
+        "Pará": [{"date": date(year, 8, 15), "holiday": "Adesão do Grão-Pará"}],
+        "Amazonas": [
+            {"date": date(year, 9, 5), "holiday": "Elevação do AM"},
+            {"date": date(year, 12, 8), "holiday": "Nossa Sra. da Conceição"},
+        ],
+        "Ceará": [
+            {"date": date(year, 3, 19), "holiday": "Dia de São José"},
+            {"date": date(year, 3, 25), "holiday": "Data Magna do CE"},
+        ],
+        "Distrito Federal": [
+            {"date": date(year, 4, 21), "holiday": "Fundação de Brasília"},
+            {"date": date(year, 11, 30), "holiday": "Dia do Evangélico"},
+            {"date": easter + timedelta(days=60), "holiday": "Corpus Christi (DF)"},
+        ],
+        "Espírito Santo": [
+            {"date": easter + timedelta(days=8), "holiday": "Nossa Sra. da Penha"}
+        ],
+        "Maranhão": [{"date": date(year, 7, 28), "holiday": "Adesão do Maranhão"}],
+        "Mato Grosso do Sul": [
+            {"date": date(year, 10, 11), "holiday": "Criação do MS"}
+        ],
+        "Acre": [
+            {"date": date(year, 1, 20), "holiday": "Dia do Católico"},
+            {"date": date(year, 1, 25), "holiday": "Dia do Evangélico"},
+            {"date": date(year, 6, 15), "holiday": "Aniversário do AC"},
+            {"date": date(year, 9, 5), "holiday": "Dia da Amazônia"},
+            {"date": date(year, 11, 17), "holiday": "Tratado de Petrópolis"},
+        ],
+        "Sergipe": [{"date": date(year, 7, 8), "holiday": "Emancipação de Sergipe"}],
+        "Tocantins": [
+            {"date": date(year, 1, 1), "holiday": "Instalação de TO"},
+            {"date": date(year, 9, 8), "holiday": "Nossa Sra. da Natividade"},
+            {"date": date(year, 10, 5), "holiday": "Criação de TO"},
+        ],
+        "Rondônia": [
+            {"date": date(year, 1, 4), "holiday": "Criação de RO"},
+            {"date": date(year, 6, 18), "holiday": "Dia do Evangélico"},
+        ],
+        "Alagoas": [
+            {"date": date(year, 6, 24), "holiday": "Dia de São João"},
+            {"date": date(year, 6, 29), "holiday": "Dia de São Pedro"},
+            {"date": date(year, 9, 16), "holiday": "Emancipação de AL"},
+        ],
+        "Roraima": [{"date": date(year, 10, 5), "holiday": "Elevação de RR"}],
+        "Amapá": [
+            {"date": date(year, 3, 19), "holiday": "Dia de São José"},
+            {"date": date(year, 7, 25), "holiday": "Dia de São Tiago"},
+        ],
+        "Paraíba": [{"date": date(year, 8, 5), "holiday": "Fundação da Paraíba"}],
+        "Piauí": [
+            {"date": date(year, 3, 13), "holiday": "Batalha do Jenipapo"},
+            {"date": date(year, 10, 19), "holiday": "Dia do Piauí"},
+        ],
+    }
+
+    state_hols = []
+    for state in selected_states:
+        if state in state_data:
+            for h in state_data[state]:
+                h_copy = h.copy()
+                h_copy["Estado"] = state
+                state_hols.append(h_copy)
+    return state_hols
+
+
+# --- GERAÇÃO DO DATAFRAME ---
+def generate_date_dimension(
+    start: date, end: date, config: dict, states: List[str]
+) -> pd.DataFrame:
     dates = pd.date_range(start=start, end=end, freq="D")
     df = pd.DataFrame({"Data": dates})
 
-    # Atributos de data
     df["Ano"] = df["Data"].dt.year
     df["Mes"] = df["Data"].dt.month
     df["Dia"] = df["Data"].dt.day
-    df["DiaSemana"] = df["Data"].dt.dayofweek + 1  # 1=Segunda ... 7=Domingo
+    df["DiaSemana"] = df["Data"].dt.dayofweek + 1
     df["NomeDiaSemana"] = df["Data"].dt.day_name(locale="pt_BR")
     df["NomeMes"] = df["Data"].dt.month_name(locale="pt_BR")
     df["AnoMes"] = df["Data"].dt.to_period("M").astype(str)
@@ -97,50 +167,58 @@ def generate_date_dimension(start: date, end: date) -> pd.DataFrame:
     df["Semestre"] = np.where(df["Mes"] <= 6, 1, 2)
     df["SemanaAno"] = df["Data"].dt.isocalendar().week.astype(int)
     df["EhFimDeSemana"] = df["DiaSemana"].isin([6, 7])
-
-    # Chave inteira (YYYYMMDD)
     df["DataInt"] = df["Data"].dt.strftime("%Y%m%d").astype(int)
 
-    # Feriados
-    feriados_df = all_holidays_in_range(start, end)
-    df = df.merge(feriados_df, on="Data", how="left")
-    df["EhFeriado"] = df["Feriado"].notna()
+    # Nacionais
+    all_nacionais = []
+    for y in range(start.year, end.year + 1):
+        all_nacionais.extend(get_holidays(y, config))
 
-    # Ordenação final
-    df = df.sort_values("Data").reset_index(drop=True)
-    return df
+    if all_nacionais:
+        nac_df = pd.DataFrame(all_nacionais)
+        nac_df["Data"] = pd.to_datetime(nac_df["date"])
+        df = df.merge(nac_df[["Data", "holiday"]], on="Data", how="left")
+        df.rename(columns={"holiday": "Feriado"}, inplace=True)
+    else:
+        df["Feriado"] = np.nan
+
+    # Estaduais
+    if states:
+        all_estaduais = []
+        for y in range(start.year, end.year + 1):
+            all_estaduais.extend(get_state_holidays(y, states))
+
+        if all_estaduais:
+            est_df = pd.DataFrame(all_estaduais)
+            est_df["Data"] = pd.to_datetime(est_df["date"])
+            est_grouped = (
+                est_df.groupby("Data")
+                .agg(
+                    {
+                        "holiday": lambda x: " / ".join(list(dict.fromkeys(x))),
+                        "Estado": lambda x: ", ".join(list(dict.fromkeys(x))),
+                    }
+                )
+                .reset_index()
+            )
+            df = df.merge(est_grouped, on="Data", how="left")
+            df.rename(columns={"holiday": "Feriado Estadual"}, inplace=True)
+        else:
+            df["Feriado Estadual"] = np.nan
+            df["Estado"] = np.nan
+
+    df["EhFeriado"] = df["Feriado"].notna() | (
+        df["Feriado Estadual"].notna() if "Feriado Estadual" in df.columns else False
+    )
+    return df.sort_values("Data").reset_index(drop=True)
 
 
-# Validação do intervalo de datas
-def validate_date_range(
-    start: date, end: date, max_years: int = 10
-) -> Tuple[bool, str]:
-    """
-    Valida o intervalo de datas:
-    - start <= end
-    - intervalo máximo de 10 anos
-    """
-    if start > end:
-        return False, "A data inicial deve ser menor ou igual à data final."
-    # Considera diferença em dias e converte para anos aproximados
-    delta_days = (end - start).days
-    if delta_days > max_years * 366:  # tolerância para anos bissextos
-        return False, f"O intervalo máximo permitido é de {max_years} anos."
-    return True, ""
-
-
-# Exportação de arquivos em vários formatos
+# --- FUNÇÕES DE EXPORTAÇÃO ---
 def to_csv_bytes(df: pd.DataFrame, sep: str = ";") -> bytes:
-    """
-    Converte DataFrame para CSV em bytes com separador customizável.
-    """
-    return df.to_csv(index=False, sep=sep).encode("utf-8")
+    return df.to_csv(index=False, sep=sep, encoding="utf-8-sig").encode("utf-8-sig")
 
 
 def to_xlsx_bytes(df: pd.DataFrame) -> bytes:
-    """
-    Converte DataFrame para XLSX em bytes.
-    """
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
         df.to_excel(writer, index=False, sheet_name="dCalendario")
@@ -148,11 +226,7 @@ def to_xlsx_bytes(df: pd.DataFrame) -> bytes:
 
 
 def to_json_bytes(df: pd.DataFrame) -> bytes:
-    """
-    Converte DataFrame para JSON (records) em bytes.
-    """
     records = df.copy()
-    # Converter Data para string ISO
     records["Data"] = records["Data"].dt.strftime("%Y-%m-%d")
     return json.dumps(
         records.to_dict(orient="records"), ensure_ascii=False, indent=2
@@ -160,135 +234,139 @@ def to_json_bytes(df: pd.DataFrame) -> bytes:
 
 
 def to_sql_script(df: pd.DataFrame, table_name: str = "dCalendario") -> bytes:
-    """
-    Gera script SQL (CREATE TABLE + INSERTs) para a dimensão de datas.
-    Tipos genéricos compatíveis com a maioria dos bancos.
-    """
-    # Mapeamento simples de tipos
-    create_stmt = f"""
-CREATE TABLE {table_name} (
-    Data DATE,
-    Ano INT,
-    Mes INT,
-    Dia INT,
-    DiaSemana INT,
-    NomeDiaSemana VARCHAR(20),
-    NomeMes VARCHAR(20),
-    AnoMes VARCHAR(7),
-    Trimestre INT,
-    Semestre INT,
-    SemanaAno INT,
-    EhFimDeSemana BOOLEAN,
-    DataInt INT,
-    Feriado VARCHAR(100),
-    EhFeriado BOOLEAN
-);
-""".strip()
+    cols = df.columns.tolist()
 
-    # Preparar inserts
+    def map_sql_type(col_name):
+        if "Data" in col_name and "Int" not in col_name:
+            return "DATE"
+        if df[col_name].dtype in [np.int64, np.int32, "int64"]:
+            return "INT"
+        if df[col_name].dtype == bool:
+            return "BOOLEAN"
+        return "VARCHAR(255)"
+
+    create_cols = [f"{c} {map_sql_type(c)}" for c in cols]
+    create_stmt = (
+        f"CREATE TABLE {table_name} (\n  " + ",\n  ".join(create_cols) + "\n);"
+    )
+
     inserts = []
     for _, row in df.iterrows():
-        data_str = row["Data"].strftime("%Y-%m-%d")
-        nome_dia = (row["NomeDiaSemana"] or "").replace("'", "''")
-        nome_mes = (row["NomeMes"] or "").replace("'", "''")
-        feriado = row["Feriado"] if pd.notna(row["Feriado"]) else ""
-        feriado = feriado.replace("'", "''")
+        vals = []
+        for col in cols:
+            val = row[col]
+            if pd.isna(val):
+                vals.append("NULL")
+            elif isinstance(val, (date, datetime, pd.Timestamp)):
+                vals.append(f"'{val.strftime('%Y-%m-%d')}'")
+            elif isinstance(val, str):
+                vals.append(f"'{val.replace(chr(39), chr(39)+chr(39))}'")
+            elif isinstance(val, bool):
+                vals.append("TRUE" if val else "FALSE")
+            else:
+                vals.append(str(val))
 
-        insert = (
-            f"INSERT INTO {table_name} (Data, Ano, Mes, Dia, DiaSemana, NomeDiaSemana, NomeMes, AnoMes, "
-            f"Trimestre, Semestre, SemanaAno, EhFimDeSemana, DataInt, Feriado, EhFeriado) VALUES ("
-            f"'{data_str}', {int(row['Ano'])}, {int(row['Mes'])}, {int(row['Dia'])}, {int(row['DiaSemana'])}, "
-            f"'{nome_dia}', '{nome_mes}', '{row['AnoMes']}', {int(row['Trimestre'])}, {int(row['Semestre'])}, "
-            f"{int(row['SemanaAno'])}, {str(bool(row['EhFimDeSemana'])).upper()}, {int(row['DataInt'])}, "
-            f"'{feriado}', {str(bool(row['EhFeriado'])).upper()}"
-            f");"
+        inserts.append(
+            f"INSERT INTO {table_name} ({', '.join(cols)}) VALUES ({', '.join(vals)});"
         )
-        inserts.append(insert)
 
-    script = create_stmt + "\n\n" + "\n".join(inserts) + "\n"
-    return script.encode("utf-8")
+    return (create_stmt + "\n\n" + "\n".join(inserts)).encode("utf-8")
 
 
-# Funções de exportação geral
 def export_dataframe(
     df: pd.DataFrame, fmt: str, csv_sep: str, filename: str
 ) -> Tuple[bytes, str]:
-    """
-    Exporta o DataFrame no formato escolhido e retorna (bytes, mime_type).
-    """
     fmt = fmt.lower()
     if fmt == "csv":
         return to_csv_bytes(df, sep=csv_sep), "text/csv"
-    elif fmt == "xlsx":
+    if fmt == "xlsx":
         return (
             to_xlsx_bytes(df),
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-    elif fmt == "json":
+    if fmt == "json":
         return to_json_bytes(df), "application/json"
-    elif fmt == "sql":
+    if fmt == "sql":
         return to_sql_script(df, table_name=filename), "application/sql"
-    else:
-        raise ValueError("Formato inválido.")
+    raise ValueError("Formato inválido.")
 
 
-# Interface Streamlit
+# --- INTERFACE ---
 def main():
-    st.set_page_config(
-        page_title="Dimensão de Datas (Brasil)", page_icon="📅", layout="centered"
-    )
-    st.title("Dimensão de Datas — Brasil")
-    st.caption(
-        "Gere uma tabela de calendário com feriados fixos e móveis, pronta para BI."
-    )
+    st.set_page_config(page_title="Calendário Brasil BI", page_icon="📅", layout="wide")
+    st.title("📅 Gerador de Tabela Dimensão Calendário")
 
-    # Inputs
-    col1, col2 = st.columns(2)
-    with col1:
-        start_date = st.date_input("Data inicial", value=date(2020, 1, 1))
-    with col2:
-        end_date = st.date_input("Data final", value=date(2025, 12, 31))
+    with st.sidebar:
+        st.header("1. Período")
+        start_date = st.date_input("Início", value=date(2024, 1, 1))
+        end_date = st.date_input("Fim", value=date(2025, 12, 31))
 
-    valid, msg = validate_date_range(start_date, end_date, max_years=10)
-    if not valid:
-        st.error(msg)
-        st.stop()
+        st.divider()
+        st.header("2. Feriados Opcionais")
+        config = {
+            "incluir_carnaval": st.checkbox("Carnaval (Seg/Ter)", value=True),
+            "incluir_cinzas": st.checkbox("Quarta de Cinzas", value=False),
+            "incluir_corpus": st.checkbox("Corpus Christi", value=True),
+            "incluir_vespera_natal": st.checkbox("Véspera Natal", value=False),
+            "incluir_vespera_ano_novo": st.checkbox("Véspera Ano Novo", value=False),
+        }
+
+    st.subheader("Feriados Estaduais")
+    lista_estados = [
+        "Acre",
+        "Alagoas",
+        "Amapá",
+        "Amazonas",
+        "Bahia",
+        "Ceará",
+        "Distrito Federal",
+        "Espírito Santo",
+        "Maranhão",
+        "Mato Grosso do Sul",
+        "Minas Gerais",
+        "Pará",
+        "Paraíba",
+        "Pernambuco",
+        "Piauí",
+        "Rio de Janeiro",
+        "Rio Grande do Sul",
+        "Rondônia",
+        "Roraima",
+        "Sergipe",
+        "São Paulo",
+        "Tocantins",
+    ]
+
+    sel_est = st.multiselect(
+        "Selecione os Estados:", options=["Todos os Estados"] + lista_estados
+    )
+    final_states = lista_estados if "Todos os Estados" in sel_est else sel_est
 
     st.divider()
-    st.subheader("Configurações de exportação")
+    st.subheader("Configurações de Exportação")
+    col_f1, col_f2, col_f3 = st.columns(3)
+    with col_f1:
+        filename = st.text_input("Nome da tabela/arquivo", value="dCalendario")
+    with col_f2:
+        fmt = st.selectbox("Formato", options=["csv", "xlsx", "json", "sql"])
+    with col_f3:
+        csv_sep = (
+            st.text_input("Separador (se CSV)", value=";") if fmt == "csv" else ";"
+        )
 
-    filename = st.text_input(
-        "Nome do arquivo (sem extensão)", value="dCalendario"
-    ).strip()
-    fmt = st.selectbox("Formato", options=["csv", "xlsx", "json", "sql"], index=0)
-
-    csv_sep = ";"
-    if fmt == "csv":
-        csv_sep = st.text_input("Separador de coluna (CSV)", value=";")
-
-    st.divider()
-    if st.button("Gerar tabela"):
-        with st.spinner("Gerando dimensão de datas..."):
-            df = generate_date_dimension(start_date, end_date)
-
+    if st.button("Gerar e Visualizar", use_container_width=True):
+        df = generate_date_dimension(start_date, end_date, config, final_states)
         st.success(f"Tabela gerada com {len(df)} linhas.")
-        st.dataframe(df.head(20), use_container_width=True)
+        st.dataframe(df.head(50), use_container_width=True)
 
-        # Export
-        try:
-            bytes_data, mime = export_dataframe(
-                df, fmt=fmt, csv_sep=csv_sep, filename=filename or "dCalendario"
-            )
-            ext = fmt if fmt != "sql" else "sql"
-            download_name = f"{filename or 'dCalendario'}.{ext}"
-            st.download_button(
-                label="Baixar arquivo",
-                data=bytes_data,
-                file_name=download_name,
-                mime=mime,
-            )
-        except Exception as e:
-            st.error(f"Erro ao exportar: {e}")
+        data_bytes, mime = export_dataframe(df, fmt, csv_sep, filename)
+        st.download_button(
+            label=f"Baixar arquivo .{fmt}",
+            data=data_bytes,
+            file_name=f"{filename}.{fmt}",
+            mime=mime,
+            use_container_width=True,
+        )
 
 
 if __name__ == "__main__":
