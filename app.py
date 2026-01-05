@@ -150,18 +150,31 @@ def get_state_holidays(year: int, selected_states: List[str]) -> List[Dict]:
 
 
 # --- GERAÇÃO DO DATAFRAME ---
-def generate_date_dimension(
-    start: date, end: date, config: dict, states: List[str]
-) -> pd.DataFrame:
+def generate_date_dimension(start: date, end: date, config: dict, states: List[str]) -> pd.DataFrame:
     dates = pd.date_range(start=start, end=end, freq="D")
     df = pd.DataFrame({"Data": dates})
+    
+    # Mapeamentos manuais para dias da semana e meses em português
+    dias_pt = {
+        0: "Segunda-feira", 1: "Terça-feira", 2: "Quarta-feira", 
+        3: "Quinta-feira", 4: "Sexta-feira", 5: "Sábado", 6: "Domingo"
+    }
+    meses_pt = {
+        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 
+        5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 
+        9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+    }
 
+    # Colunas de data
     df["Ano"] = df["Data"].dt.year
     df["Mes"] = df["Data"].dt.month
     df["Dia"] = df["Data"].dt.day
     df["DiaSemana"] = df["Data"].dt.dayofweek + 1
-    df["NomeDiaSemana"] = df["Data"].dt.day_name(locale="pt_BR")
-    df["NomeMes"] = df["Data"].dt.month_name(locale="pt_BR")
+    
+    # Mapeamento manual em vez de usar locale="pt_BR"
+    df["NomeDiaSemana"] = df["Data"].dt.dayofweek.map(dias_pt)
+    df["NomeMes"] = df["Data"].dt.month.map(meses_pt)
+    
     df["AnoMes"] = df["Data"].dt.to_period("M").astype(str)
     df["Trimestre"] = df["Data"].dt.quarter
     df["Semestre"] = np.where(df["Mes"] <= 6, 1, 2)
