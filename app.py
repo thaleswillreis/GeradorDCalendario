@@ -150,39 +150,67 @@ def get_state_holidays(year: int, selected_states: List[str]) -> List[Dict]:
 
 
 # --- GERAÇÃO DO DATAFRAME ---
-def generate_date_dimension(start: date, end: date, config: dict, states: List[str]) -> pd.DataFrame:
+def generate_date_dimension(
+    start: date, end: date, config: dict, states: List[str]
+) -> pd.DataFrame:
     dates = pd.date_range(start=start, end=end, freq="D")
     df = pd.DataFrame({"Data": dates})
-    
-    # Mapeamentos manuais para dias da semana e meses em português
+
+    # Mapeamentos manuais
     dias_pt = {
-        0: "Segunda-feira", 1: "Terça-feira", 2: "Quarta-feira", 
-        3: "Quinta-feira", 4: "Sexta-feira", 5: "Sábado", 6: "Domingo"
+        1: "Domingo",
+        2: "Segunda-feira",
+        3: "Terça-feira",
+        4: "Quarta-feira",
+        5: "Quinta-feira",
+        6: "Sexta-feira",
+        7: "Sábado",
     }
     meses_pt = {
-        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 
-        5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 
-        9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+        1: "Janeiro",
+        2: "Fevereiro",
+        3: "Março",
+        4: "Abril",
+        5: "Maio",
+        6: "Junho",
+        7: "Julho",
+        8: "Agosto",
+        9: "Setembro",
+        10: "Outubro",
+        11: "Novembro",
+        12: "Dezembro",
     }
 
-    # Colunas de data
+    # Atributos básicos
     df["Ano"] = df["Data"].dt.year
     df["Mes"] = df["Data"].dt.month
-    df["Dia"] = df["Data"].dt.day
-    df["DiaSemana"] = df["Data"].dt.dayofweek + 1
-    
-    # Mapeamento manual em vez de usar locale="pt_BR"
-    df["NomeDiaSemana"] = df["Data"].dt.dayofweek.map(dias_pt)
+    df["DiaDoMes"] = df["Data"].dt.day
+    df["DiaDoAno"] = df["Data"].dt.dayofyear
+
+    # DiaSemana (Domingo = 1, Sábado = 7)
+    df["DiaSemana"] = (df["Data"].dt.dayofweek + 1) % 7 + 1
+    df["NomeDiaSemana"] = df["DiaSemana"].map(dias_pt)
     df["NomeMes"] = df["Data"].dt.month.map(meses_pt)
-    
     df["AnoMes"] = df["Data"].dt.to_period("M").astype(str)
     df["Trimestre"] = df["Data"].dt.quarter
     df["Semestre"] = np.where(df["Mes"] <= 6, 1, 2)
-    df["SemanaAno"] = df["Data"].dt.isocalendar().week.astype(int)
-    df["EhFimDeSemana"] = df["DiaSemana"].isin([6, 7])
+
+    # Semana começando no Domingo (Padrão Brasil/EUA - 1 a 53)
+    df["SemanaAno"] = df["Data"].dt.strftime("%U").astype(int) + 1
+    # Semana Padrão ISO 8601 (Padrão Internacional/ERP - 52 semanas)
+    df["SemanaAnoISO"] = df["Data"].dt.isocalendar().week.astype(int)
+
+    df["EhFimDeSemana"] = df["DiaSemana"].isin([1, 7])  # Domingo e Sábado
     df["DataInt"] = df["Data"].dt.strftime("%Y%m%d").astype(int)
 
-    # Nacionais
+    # 3. DataEpoch (Padrão Excel/Google Sheets - Base 1900)
+    base_excel = pd.Timestamp("1899-12-30")
+    df["DataEpoch"] = (df["Data"] - base_excel).dt.days
+
+    # 4. DataUnixPosix (Segundos desde 1970)
+    df["DataUnixPosix"] = df["Data"].astype(np.int64) // 10**9
+
+    # --- Lógica de Feriados (Nacionais) ---
     all_nacionais = []
     for y in range(start.year, end.year + 1):
         all_nacionais.extend(get_holidays(y, config))
@@ -195,7 +223,7 @@ def generate_date_dimension(start: date, end: date, config: dict, states: List[s
     else:
         df["Feriado"] = np.nan
 
-    # Estaduais
+    # --- Lógica de Feriados (Estaduais) ---
     if states:
         all_estaduais = []
         for y in range(start.year, end.year + 1):
@@ -223,6 +251,7 @@ def generate_date_dimension(start: date, end: date, config: dict, states: List[s
     df["EhFeriado"] = df["Feriado"].notna() | (
         df["Feriado Estadual"].notna() if "Feriado Estadual" in df.columns else False
     )
+
     return df.sort_values("Data").reset_index(drop=True)
 
 
