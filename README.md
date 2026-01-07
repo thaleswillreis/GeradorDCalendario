@@ -31,17 +31,21 @@ Oferecer um software capaz de:
 |------|----------|----------|----------|
 | `Data` | Data no formato ISO 8601 ("yyyy-MM-ddTHH:mm:ssZ") | Date | 2025-12-31 00:00:00 |
 | `Ano` | Ano numérico com quatro dígitos | Int | 2025 |
-| `Mes` | Mês numérico com dois dígitos | Int | 12 |
-| `Dia` | Dia numérico com dois dígitos  | Int | 31 |
-| `DiaSemana` | Posição do dia na semana numérico com um dígito  | Int | 3 |
+| `Mes` | Mês numérico com dois dígitos de 1 a 12 | Int | 12 |
+| `DiaDoMes` | Dia numérico com dois dígitos de 1 a 31  | Int | 31 |
+| `DiaDoAno` | Dia numérico de 1 a 366  | Int | 365 |
+| `DiaSemana` | Posição do dia na semana numérico com um dígito de 1 a 7  | Int | 3 |
 | `NomeDiaSemana` | Dia da semana por extenso | String | Quarta-feira |
-| `NomeMes` | Mês por extenso  | String | Dezempbro |
+| `NomeMes` | Mês por extenso  | String | Dezembro |
 | `AnoMes` | Ano e mês no formato de texto | String | "2025-12" |
 | `Trimestre` | Trimestre numérico com um dígito | Int | 4 |
 | `Semestre` | Semestre numérico com um dígito | Int | 2 |
-| `SemanaAno` | Semana do ano numérico com dois dígitos | Int | 52 |
+| `SemanaAno` | Semana do ano numérico padrão Brasil/EUA - 1 a 53 | Int | 53 |
+| `SemanaAnoISO` | Semana do ano numérico ISO 8601, padrão Internacional/ERP - 52 semanas | Int | 52 |
 | `EhFimDeSemana` | Valor lógico indicativo de fim de semana | Boolean | FALSO |
 | `DataInt` | Data no formato de número inteiro sem espaço | Int | 20251231 |
+| `DataEpoch` | Data no formato de número inteiro padrão Excel/Google Sheets - Base 1900 | Int | 46082 |
+| `DataUnixPosix` | Data no formato de número inteiro padrão Unix/Posix, qtd de segundos desde 1970 | Int | 1767216000 |
 | `Feriado` | Nome do feriado por extenso (caso seja um feriado) | String | Véspera de Ano Novo |
 | `Feriado Estadual` | Nome do feriado por extenso (caso seja um feriado estadual) | String | Revolução Constitucionalista |
 | `Estado` | Nome do Estado do feriado Estadual | String | São Paulo |
@@ -49,7 +53,7 @@ Oferecer um software capaz de:
 
 
 > [!NOTE]
-> As colunas `Feriado Estadual` e `Estado` só são incluídas no dataset quando pelo menos um Estado é selecionado na lista de Estados onde há feriados estaduais.
+> As colunas `Feriado Estadual` e `Estado` são preenchidas automaticamente quando pelo menos um Estado é selecionado na lista de Estados onde há feriados estaduais.
 
 ## Requisitos e Versões das Principais Bibliotecas
 
