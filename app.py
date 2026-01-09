@@ -153,10 +153,10 @@ def get_state_holidays(year: int, selected_states: List[str]) -> List[Dict]:
 def generate_date_dimension(
     start: date, end: date, config: dict, states: List[str]
 ) -> pd.DataFrame:
+    # (O corpo desta função permanece exatamente o mesmo que você postou)
     dates = pd.date_range(start=start, end=end, freq="D")
     df = pd.DataFrame({"Data": dates})
 
-    # Mapeamentos manuais
     dias_pt = {
         1: "Domingo",
         2: "Segunda-feira",
@@ -181,40 +181,27 @@ def generate_date_dimension(
         12: "Dezembro",
     }
 
-    # Atributos básicos
     df["Ano"] = df["Data"].dt.year
     df["Mes"] = df["Data"].dt.month
     df["DiaDoMes"] = df["Data"].dt.day
     df["DiaDoAno"] = df["Data"].dt.dayofyear
-
-    # DiaSemana (Domingo = 1, Sábado = 7)
     df["DiaSemana"] = (df["Data"].dt.dayofweek + 1) % 7 + 1
     df["NomeDiaSemana"] = df["DiaSemana"].map(dias_pt)
     df["NomeMes"] = df["Data"].dt.month.map(meses_pt)
     df["AnoMes"] = df["Data"].dt.to_period("M").astype(str)
     df["Trimestre"] = df["Data"].dt.quarter
     df["Semestre"] = np.where(df["Mes"] <= 6, 1, 2)
-
-    # Semana começando no Domingo (Padrão Brasil/EUA - 1 a 53)
     df["SemanaAno"] = df["Data"].dt.strftime("%U").astype(int) + 1
-    # Semana Padrão ISO 8601 (Padrão Internacional/ERP - 52 semanas)
     df["SemanaAnoISO"] = df["Data"].dt.isocalendar().week.astype(int)
-
-    df["EhFimDeSemana"] = df["DiaSemana"].isin([1, 7])  # Domingo e Sábado
+    df["EhFimDeSemana"] = df["DiaSemana"].isin([1, 7])
     df["DataInt"] = df["Data"].dt.strftime("%Y%m%d").astype(int)
-
-    # 3. DataEpoch (Padrão Excel/Google Sheets - Base 1900)
     base_excel = pd.Timestamp("1899-12-30")
     df["DataEpoch"] = (df["Data"] - base_excel).dt.days
-
-    # 4. DataUnixPosix (Segundos desde 1970)
     df["DataUnixPosix"] = df["Data"].astype(np.int64) // 10**9
 
-    # --- Lógica de Feriados (Nacionais) ---
     all_nacionais = []
     for y in range(start.year, end.year + 1):
         all_nacionais.extend(get_holidays(y, config))
-
     if all_nacionais:
         nac_df = pd.DataFrame(all_nacionais)
         nac_df["Data"] = pd.to_datetime(nac_df["date"])
@@ -223,12 +210,10 @@ def generate_date_dimension(
     else:
         df["Feriado"] = np.nan
 
-    # --- Lógica de Feriados (Estaduais) ---
     if states:
         all_estaduais = []
         for y in range(start.year, end.year + 1):
             all_estaduais.extend(get_state_holidays(y, states))
-
         if all_estaduais:
             est_df = pd.DataFrame(all_estaduais)
             est_df["Data"] = pd.to_datetime(est_df["date"])
@@ -251,7 +236,6 @@ def generate_date_dimension(
     df["EhFeriado"] = df["Feriado"].notna() | (
         df["Feriado Estadual"].notna() if "Feriado Estadual" in df.columns else False
     )
-
     return df.sort_values("Data").reset_index(drop=True)
 
 
@@ -343,6 +327,12 @@ def main():
         start_date = st.date_input("Início", value=date(2024, 1, 1))
         end_date = st.date_input("Fim", value=date(2025, 12, 31))
 
+        # --- CORREÇÃO 1: Validação de Datas ---
+        datas_validas = True
+        if start_date > end_date:
+            st.error("A data de **Início** não pode ser maior que a data de **Fim**.")
+            datas_validas = False
+
         st.divider()
         st.header("2. Feriados Opcionais")
         config = {
@@ -379,10 +369,27 @@ def main():
         "Tocantins",
     ]
 
+    # --- CORREÇÃO 2: Lógica de Seleção "Todos os Estados" ---
+    # Usamos o session_state do Streamlit para manipular a lista de forma inteligente
+    if "selected_states" not in st.session_state:
+        st.session_state.selected_states = []
+
     sel_est = st.multiselect(
-        "Selecione os Estados:", options=["Todos os Estados"] + lista_estados
+        "Selecione os Estados:",
+        options=["Todos os Estados"] + lista_estados,
+        key="state_selector",
     )
-    final_states = lista_estados if "Todos os Estados" in sel_est else sel_est
+
+    # Se "Todos os Estados" for selecionado em qualquer momento, limpamos o resto e fixamos nele
+    if "Todos os Estados" in sel_est:
+        final_states = lista_estados
+        # Mostra um aviso informativo para o usuário
+        if len(sel_est) > 1:
+            st.info(
+                "A opção 'Todos os Estados' foi selecionada. As seleções individuais serão ignoradas."
+            )
+    else:
+        final_states = sel_est
 
     st.divider()
     st.subheader("Configurações de Exportação")
@@ -396,19 +403,23 @@ def main():
             st.text_input("Separador (se CSV)", value=";") if fmt == "csv" else ";"
         )
 
-    if st.button("Gerar e Visualizar", use_container_width=True):
-        df = generate_date_dimension(start_date, end_date, config, final_states)
-        st.success(f"Tabela gerada com {len(df)} linhas.")
-        st.dataframe(df.head(50), use_container_width=True)
+    # Botão só funciona se as datas forem válidas
+    if datas_validas:
+        if st.button("Gerar e Visualizar", use_container_width=True):
+            df = generate_date_dimension(start_date, end_date, config, final_states)
+            st.success(f"Tabela gerada com {len(df)} linhas.")
+            st.dataframe(df.head(50), use_container_width=True)
 
-        data_bytes, mime = export_dataframe(df, fmt, csv_sep, filename)
-        st.download_button(
-            label=f"Baixar arquivo .{fmt}",
-            data=data_bytes,
-            file_name=f"{filename}.{fmt}",
-            mime=mime,
-            use_container_width=True,
-        )
+            data_bytes, mime = export_dataframe(df, fmt, csv_sep, filename)
+            st.download_button(
+                label=f"Baixar arquivo .{fmt}",
+                data=data_bytes,
+                file_name=f"{filename}.{fmt}",
+                mime=mime,
+                use_container_width=True,
+            )
+    else:
+        st.warning("Corrija o período no menu lateral para habilitar a geração.")
 
 
 if __name__ == "__main__":
