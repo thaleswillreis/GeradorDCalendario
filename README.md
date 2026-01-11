@@ -1,6 +1,6 @@
-# Gerador Multiformato de Arquivos de Tabelas Dimensão de Data
+# Gerador Multiformato de Arquivos de Tabela Dimensão de Data
 
-Este projeto parte da necessidade de gerar arquivos contendo Tabelas Dimensão de Data para cerem utilizadas em diferentes projetos de Business Intelligence e compatíveis com diferentes ferramentas de BI e contendo diferentes granularidades de valores de tempo, concebidos a partir cálculos matemáticos testados e obedecendo as legislações estaduais e federais vigentes que regulamentam feriados e dias úteis no Brasil.
+Este projeto parte da necessidade de gerar arquivos contendo Tabelas Dimensão de Data para serem utilizadas em diferentes projetos de Business Intelligence e compatíveis com diferentes ferramentas de BI e contendo diferentes granularidades de valores de tempo, concebidos a partir de cálculos matemáticos testados e obedecendo às legislações estaduais e federais vigentes que regulamentam feriados e dias úteis no Brasil.
 
 O resultado final é um software capaz de ser rodado em nuvem ou local, que gera **Tabelas Dimensão de Data** em diferentes formatos de arquivos e permite a inclusão de feriados estaduais e federais de forma dinâmica a partir de uma interface gráfica simples e funcional.
 
@@ -10,7 +10,7 @@ Oferecer um software capaz de:
 
 - Gerar arquivos para serem utilizados como Tabelas Dimensão de Data nos formatos mais populares do mercado;  
 - Oferecer ao usuário a opção de customizar o arquivo a ser gerado em relação ao formato e conteúdo;
-- Ser executado stand alone ou na nuvem;
+- Ser executado standalone ou na nuvem;
 - Oferecer pré-visualização antes de fazer o download dos arquivos gerados;
 - Ser facilmente reproduzível, copiável, adaptável ou modificável.
 
@@ -45,11 +45,11 @@ Oferecer um software capaz de:
 | `EhFimDeSemana` | Valor lógico indicativo de fim de semana | Boolean | FALSO |
 | `DataInt` | Data no formato de número inteiro sem espaço | Int | 20251231 |
 | `DataEpoch` | Data no formato de número inteiro padrão Excel/Google Sheets - Base 1900 | Int | 46082 |
-| `DataUnixPosix` | Data no formato de número inteiro padrão Unix/Posix, qtd de segundos desde 1970 | Int | 1767216000 |
+| `DataUnixPosix` | Data no formato de número inteiro padrão Unix/Posix, quantidade de segundos desde 1970 | Int | 1767216000 |
 | `Feriado` | Nome do feriado por extenso (caso seja um feriado) | String | Véspera de Ano Novo |
 | `Feriado Estadual` | Nome do feriado por extenso (caso seja um feriado estadual) | String | Revolução Constitucionalista |
 | `Estado` | Nome do Estado do feriado Estadual | String | São Paulo |
-| `EhFeriado` | Valor lógico indicativo de feriado nacional ou estadual| Boolean | VERDADEIRO |
+| `EhFeriado` | Valor lógico indicativo de feriado nacional ou estadual | Boolean | VERDADEIRO |
 
 
 > [!NOTE]
@@ -57,16 +57,19 @@ Oferecer um software capaz de:
 
 ## Requisitos e Versões das Principais Bibliotecas
 
-- **python** 3.13.5 (ou compatível)
-- **streamlit** 1.52.2 (ou compatível)
-- **pandas** 2.3.3 (ou compatível)
-- **numpy** 2.4.0 (ou compatível)
-- **xlsxwriter** 3.2.9 (ou compatível)
+- **Python** 3.13.5 (ou compatível)
+- **Streamlit** 1.52.2 (ou compatível)
+- **Pandas** 2.3.3 (ou compatível)
+- **Numpy** 2.4.0 (ou compatível)
+- **Xlsxwriter** 3.2.9 (ou compatível)
 
 
 ## Como Utilizar
 
-`OBS:` Instruções de utilização baseadas em sistemas Linux derivados do Debian (Ubuntu, Linux Mint, Elementary OS, Pop!_OS, etc).
+
+> [!IMPORTANT]
+>Instruções de utilização baseadas em sistemas Linux derivados do Debian (Ubuntu, Linux Mint, Elementary OS, Pop!_OS, etc).
+
 
 ### 1 - Criar ambiente virtual
 
@@ -88,25 +91,25 @@ $ streamlit run app.py
 
 O software executará em uma nova aba do navegador utilizando o seguinte endereço: `http://localhost:8501`
 
-![Exucução](https://raw.githubusercontent.com/thaleswillreis/GeradorDCalendario/main/doc/ExecLocal.png)
+![Execução](https://raw.githubusercontent.com/thaleswillreis/GeradorDCalendario/main/doc/ExecLocal.png)
 
 > [!NOTE]
 > Para saber mais sobre o deploy e execução na nuvem do Streamlit ou demais nuvens, consulte a [documentação do Streamlit](https://docs.streamlit.io/).
 
 ## Casos de Uso
 
-- Servir como tabela dimensão em projetos de **Business Inteligence** para análises temporais complexas;
+- Servir como tabela dimensão em projetos de **Business Intelligence** para análises temporais complexas;
 - Utilizar em análises de dados que incluem múltiplas tabelas fato contendo datas, granularidades diferentes ou períodos sem dados de transações;
 - Análises regionais ou com requisitos de negócio específicos como feriados, dias úteis, etc;
 - Pré-calcular e indexar atributos da dimensão de data em **data warehouses** com grandes volumes de dados nas tabelas fato para ganho de performance em agregações.
 
 ## Observações Importantes
 
-Esse é um projeto em estágio experimental. Antes de utilizar os arquivos de dados gerados através desse projeto em produção, verifique a consistência e a precisão dos dados gerados. O autor original desse projeto não se responsabiliza pelo uso indevido dos dados gerados através do projeto original ou por forks ou clones do mesmo.
+Este é um projeto em estágio experimental. Antes de utilizar os arquivos de dados gerados através desse projeto em produção, verifique a consistência e a precisão dos dados gerados. O autor original desse projeto não se responsabiliza pelo uso indevido dos dados gerados através do projeto original ou por forks ou clones do mesmo.
 
 ## Créditos e Agradecimentos
 
-O cálculo da data de **Domingo de Páscoa** que representa parte importante desse projeto, foi baseado em informações adquiridas no vídeo do especialista em Power BI `Laennder Alves`. **Título:** `"Obter Lista de Feriados no Power BI (sem API)"` - **disponível em:** https://youtu.be/kOf5P6tiTbg?si=whEJ3CxMsfILfEU9
+O cálculo da data de **Domingo de Páscoa** que representa parte importante desse projeto foi baseado em informações adquiridas no vídeo do especialista em Power BI `Laennder Alves`. **Título:** `"Obter Lista de Feriados no Power BI (sem API)"` - **disponível em:** https://youtu.be/kOf5P6tiTbg?si=whEJ3CxMsfILfEU9
 
 ## Licença
 
